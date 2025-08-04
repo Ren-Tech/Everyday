@@ -1,10 +1,20 @@
 // main.dart
+import 'package:everyday/models/habit.dart';
 import 'package:everyday/providers/habit_provider.dart';
 import 'package:everyday/screens/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Required for async initialization
+  await Hive.initFlutter(); // Initialize Hive
+  Hive.registerAdapter(HabitAdapter()); // Register adapters
+  Hive.registerAdapter(GoalTypeAdapter());
+  Hive.registerAdapter(CategoryAdapter());
+
+  await Hive.openBox<Habit>('habitsBox'); // Open the box
+
   runApp(const HabitTrackerApp());
 }
 
@@ -38,38 +48,3 @@ class HabitTrackerApp extends StatelessWidget {
     );
   }
 }
-
-// models/habit.dart
-
-
-// providers/habit_provider.dart
-
-
-// screens/home_screen.dart
-
-
-// widgets/stats_overview.dart
-
-
-// widgets/habit_card.dart
-
-// widgets/heatmap_widget.dart
-
-
-// widgets/add_habit_dialog.dart
-
-// widgets/habit_detail_dialog.dart
-
-
-// pubspec.yaml dependencies:
-/*
-dependencies:
-  flutter:
-    sdk: flutter
-  provider: ^6.0.5
-  
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^2.0.0
-*/

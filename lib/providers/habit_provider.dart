@@ -1,33 +1,48 @@
 import 'package:everyday/models/habit.dart';
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 
 class HabitProvider extends ChangeNotifier {
-  final List<Habit> _habits = [];
+  Box<Habit>? _habitsBox;
 
-  List<Habit> get habits => List.unmodifiable(_habits);
+  HabitProvider() {
+    _init();
+  }
+
+  Future<void> _init() async {
+    _habitsBox = await Hive.openBox<Habit>('habits');
+    notifyListeners();
+  }
+
+  List<Habit> get habits => _habitsBox?.values.toList() ?? [];
 
   void addHabit(Habit habit) {
-    _habits.add(habit);
+    _habitsBox?.add(habit);
     notifyListeners();
   }
 
   void updateHabit(String habitId, Habit updatedHabit) {
-    final index = _habits.indexWhere((habit) => habit.id == habitId);
+    final habit = _habitsBox?.values.firstWhere((h) => h.id == habitId);
+    if (habit == null) return;
+
+    final index = _habitsBox!.values.toList().indexOf(habit);
     if (index != -1) {
-      _habits[index] = updatedHabit;
+      _habitsBox!.putAt(index, updatedHabit);
       notifyListeners();
     }
   }
 
   void deleteHabit(String habitId) {
-    _habits.removeWhere((habit) => habit.id == habitId);
+    final habit = _habitsBox?.values.firstWhere((h) => h.id == habitId);
+    habit?.delete();
     notifyListeners();
   }
 
   void incrementHabitCompletion(String habitId, DateTime date) {
-    final habit = _habits.firstWhere((h) => h.id == habitId);
-    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final habit = _habitsBox?.values.firstWhere((h) => h.id == habitId);
+    if (habit == null) return;
 
+    final normalizedDate = DateTime(date.year, date.month, date.day);
     final updatedCompletions = Map<DateTime, int>.from(habit.completions);
     final currentCount = updatedCompletions[normalizedDate] ?? 0;
     updatedCompletions[normalizedDate] = currentCount + 1;
@@ -36,9 +51,10 @@ class HabitProvider extends ChangeNotifier {
   }
 
   void decrementHabitCompletion(String habitId, DateTime date) {
-    final habit = _habits.firstWhere((h) => h.id == habitId);
-    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final habit = _habitsBox?.values.firstWhere((h) => h.id == habitId);
+    if (habit == null) return;
 
+    final normalizedDate = DateTime(date.year, date.month, date.day);
     final updatedCompletions = Map<DateTime, int>.from(habit.completions);
     final currentCount = updatedCompletions[normalizedDate] ?? 0;
     if (currentCount > 0) {
@@ -48,6 +64,9 @@ class HabitProvider extends ChangeNotifier {
   }
 
   List<Habit> getHabitsByCategory(Category category) {
-    return _habits.where((habit) => habit.category == category).toList();
+    return _habitsBox?.values
+            .where((habit) => habit.category == category)
+            .toList() ??
+        [];
   }
 }

@@ -1,57 +1,160 @@
 import 'package:everyday/models/habit.dart';
 import 'package:flutter/material.dart';
 
-class HeatmapWidget extends StatelessWidget {
+class HeatmapWidget extends StatefulWidget {
   final Habit habit;
   final bool compact;
 
   const HeatmapWidget({super.key, required this.habit, this.compact = false});
 
   @override
+  State<HeatmapWidget> createState() => _HeatmapWidgetState();
+}
+
+class _HeatmapWidgetState extends State<HeatmapWidget> {
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _heatmapKey = GlobalKey();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final today = DateTime.now();
-    final weeks = compact ? 12 : 53;
-    final endDate = today;
-    final startDate = today.subtract(Duration(days: weeks * 7));
+    final weeks = widget.compact ? 12 : 53;
+
+    // For full year display, start from beginning of current year
+    // For compact display, show last 12 weeks
+    late DateTime startDate;
+    late DateTime endDate;
+
+    if (widget.compact) {
+      endDate = today;
+      startDate = today.subtract(Duration(days: weeks * 7));
+    } else {
+      // Display whole year - from January 1st to current date
+      startDate = DateTime(today.year, 1, 1);
+      endDate = today; // Only show up to today, not future dates
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!compact) _buildMonthLabels(startDate, endDate),
+        if (!widget.compact) _buildSyncedMonthLabels(startDate, endDate),
         Row(
           children: [
-            if (!compact) _buildWeekdayLabels(),
+            if (!widget.compact) _buildWeekdayLabels(),
             Expanded(child: _buildHeatmap(startDate, endDate)),
           ],
         ),
-        if (!compact) ...[const SizedBox(height: 16), _buildLegend(context)],
+        if (!widget.compact) ...[
+          const SizedBox(height: 16),
+          _buildLegend(context),
+        ],
       ],
     );
   }
 
-  Widget _buildMonthLabels(DateTime startDate, DateTime endDate) {
-    final months = <Widget>[];
-    DateTime current = DateTime(startDate.year, startDate.month, 1);
+  Widget _buildSyncedMonthLabels(DateTime startDate, DateTime endDate) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 30, bottom: 8),
+      child: SizedBox(
+        height: 20,
+        child: NotificationListener<ScrollNotification>(
+          onNotification: (notification) =>
+              false, // Don't consume the notification
+          child: SingleChildScrollView(
+            controller: _scrollController,
+            scrollDirection: Axis.horizontal,
+            child: _buildMonthLabelsRow(startDate, endDate),
+          ),
+        ),
+      ),
+    );
+  }
 
-    while (current.isBefore(endDate)) {
-      final daysInView = _getDaysInMonth(current, startDate, endDate);
-      if (daysInView > 0) {
+  Widget _buildMonthLabelsRow(DateTime startDate, DateTime endDate) {
+    final months = <Widget>[];
+
+    // Calculate weeks and build month labels that align with heatmap
+    DateTime current = _getStartOfWeek(startDate);
+    int weekIndex = 0;
+
+    while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
+      final weekStart = current;
+      final weekEnd = current.add(const Duration(days: 6));
+
+      // Check if this week starts a new month
+      final isNewMonth =
+          weekIndex == 0 ||
+          (weekStart.month !=
+              weekStart.subtract(const Duration(days: 7)).month);
+
+      if (isNewMonth) {
+        // Find the dominant month in this week
+        int monthToShow = weekStart.month;
+        if (weekStart.day > 15 && weekEnd.month != weekStart.month) {
+          monthToShow = weekEnd.month;
+        }
+
         months.add(
           SizedBox(
-            width: (daysInView / 7) * 12.0,
+            width: 14.0, // Same as week width in heatmap
+            child: weekIndex == 0
+                ? Text(
+                    _getMonthName(monthToShow),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    overflow: TextOverflow.visible,
+                  )
+                : Container(),
+          ),
+        );
+      } else {
+        months.add(const SizedBox(width: 14.0));
+      }
+
+      current = current.add(const Duration(days: 7));
+      weekIndex++;
+
+      // Safety check
+      if (weekIndex > 60) break;
+    }
+
+    // Add month labels at appropriate positions
+    final labelWidgets = <Widget>[];
+    DateTime labelCurrent = _getStartOfWeek(startDate);
+    int currentMonth = labelCurrent.month;
+    double currentPosition = 0;
+
+    while (labelCurrent.isBefore(endDate) ||
+        labelCurrent.isAtSameMomentAs(endDate)) {
+      if (labelCurrent.month != currentMonth ||
+          labelCurrent.isAtSameMomentAs(_getStartOfWeek(startDate))) {
+        labelWidgets.add(
+          Positioned(
+            left: currentPosition,
             child: Text(
-              _getMonthName(current.month),
+              _getMonthName(labelCurrent.month),
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ),
         );
+        currentMonth = labelCurrent.month;
       }
-      current = DateTime(current.year, current.month + 1, 1);
+
+      labelCurrent = labelCurrent.add(const Duration(days: 7));
+      currentPosition += 14.0;
+
+      if (labelWidgets.length > 12) break;
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(left: 30, bottom: 8),
-      child: Row(children: months),
+    return SizedBox(
+      width: currentPosition,
+      height: 20,
+      child: Stack(children: labelWidgets),
     );
   }
 
@@ -66,6 +169,7 @@ class HeatmapWidget extends StatelessWidget {
               child: Text(
                 day,
                 style: const TextStyle(fontSize: 10, color: Colors.grey),
+                textAlign: TextAlign.end,
               ),
             ),
           )
@@ -75,25 +179,52 @@ class HeatmapWidget extends StatelessWidget {
 
   Widget _buildHeatmap(DateTime startDate, DateTime endDate) {
     final weeks = <Widget>[];
+
+    // Start from the beginning of the week that contains startDate
     DateTime current = _getStartOfWeek(startDate);
 
     while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
-      weeks.add(_buildWeek(current));
+      // Only add weeks that have at least one day in our range
+      final weekEnd = current.add(const Duration(days: 6));
+      if (weekEnd.isAfter(startDate) || weekEnd.isAtSameMomentAs(startDate)) {
+        weeks.add(_buildWeek(current, startDate, endDate));
+      }
+
       current = current.add(const Duration(days: 7));
+
+      // Safety check to prevent infinite loop
+      if (weeks.length > 60) break;
     }
 
     return SingleChildScrollView(
+      key: _heatmapKey,
+      controller: _scrollController,
       scrollDirection: Axis.horizontal,
       child: Row(children: weeks),
     );
   }
 
-  Widget _buildWeek(DateTime weekStart) {
+  Widget _buildWeek(
+    DateTime weekStart,
+    DateTime rangeStart,
+    DateTime rangeEnd,
+  ) {
     final days = <Widget>[];
+    final today = DateTime.now();
 
     for (int i = 0; i < 7; i++) {
       final date = weekStart.add(Duration(days: i));
-      days.add(_buildDay(date));
+
+      // Only show days that are:
+      // 1. Within our date range
+      // 2. Not in the future (beyond today)
+      if (date.isAfter(rangeEnd) ||
+          date.isBefore(rangeStart) ||
+          date.isAfter(today)) {
+        days.add(_buildEmptyDay());
+      } else {
+        days.add(_buildDay(date));
+      }
     }
 
     return Padding(
@@ -103,7 +234,7 @@ class HeatmapWidget extends StatelessWidget {
   }
 
   Widget _buildDay(DateTime date) {
-    final completionPercentage = habit.getCompletionPercentage(date);
+    final completionPercentage = widget.habit.getCompletionPercentage(date);
     final color = _getColorForCompletion(completionPercentage);
     final isToday = _isSameDay(date, DateTime.now());
 
@@ -117,6 +248,10 @@ class HeatmapWidget extends StatelessWidget {
         border: isToday ? Border.all(color: Colors.black, width: 1) : null,
       ),
     );
+  }
+
+  Widget _buildEmptyDay() {
+    return Container(width: 10, height: 10, margin: const EdgeInsets.all(1));
   }
 
   Widget _buildLegend(BuildContext context) {
@@ -145,7 +280,7 @@ class HeatmapWidget extends StatelessWidget {
   Color _getColorForCompletion(double completion) {
     if (completion == 0) return const Color(0xFFEBEDF0);
 
-    final baseColor = habit.color;
+    final baseColor = widget.habit.color;
     if (completion >= 1.0) return baseColor;
 
     // GitHub-style intensity levels
@@ -163,18 +298,6 @@ class HeatmapWidget extends StatelessWidget {
     return date1.year == date2.year &&
         date1.month == date2.month &&
         date1.day == date2.day;
-  }
-
-  int _getDaysInMonth(DateTime month, DateTime startDate, DateTime endDate) {
-    final monthStart = DateTime(month.year, month.month, 1);
-    final monthEnd = DateTime(month.year, month.month + 1, 0);
-
-    final visibleStart = monthStart.isBefore(startDate)
-        ? startDate
-        : monthStart;
-    final visibleEnd = monthEnd.isAfter(endDate) ? endDate : monthEnd;
-
-    return visibleEnd.difference(visibleStart).inDays + 1;
   }
 
   String _getMonthName(int month) {

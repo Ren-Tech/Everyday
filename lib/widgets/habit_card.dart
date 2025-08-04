@@ -1,6 +1,6 @@
 import 'package:everyday/models/habit.dart';
 import 'package:everyday/providers/habit_provider.dart';
-import 'package:everyday/widgets/habit_detail_dialog.dart';
+import 'package:everyday/screens/habit_detail_screen.dart';
 import 'package:everyday/widgets/heatmap_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -257,7 +257,7 @@ class HabitCard extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => HabitDetailDialog(habit: habit),
+      builder: (context) => HabitDetailScreen(habit: habit),
     );
   }
 
@@ -265,7 +265,12 @@ class HabitCard extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
         child: Container(
+          width: double.maxFinite,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.8,
+          ),
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -274,7 +279,7 @@ class HabitCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '${habit.name} - Activity',
+                      '${habit.name} - Jan ${DateTime.now().year} to Today',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
@@ -287,7 +292,11 @@ class HabitCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              HeatmapWidget(habit: habit, compact: false),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: HeatmapWidget(habit: habit, compact: false),
+                ),
+              ),
             ],
           ),
         ),

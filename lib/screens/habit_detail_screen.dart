@@ -3,16 +3,16 @@ import 'package:everyday/providers/habit_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class HabitDetailDialog extends StatefulWidget {
+class HabitDetailScreen extends StatefulWidget {
   final Habit habit;
 
-  const HabitDetailDialog({super.key, required this.habit});
+  const HabitDetailScreen({super.key, required this.habit});
 
   @override
-  State<HabitDetailDialog> createState() => _HabitDetailDialogState();
+  State<HabitDetailScreen> createState() => _HabitDetailScreenState();
 }
 
-class _HabitDetailDialogState extends State<HabitDetailDialog> {
+class _HabitDetailScreenState extends State<HabitDetailScreen> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
   late Category _selectedCategory;
@@ -48,40 +48,26 @@ class _HabitDetailDialogState extends State<HabitDetailDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(28),
-            topRight: Radius.circular(28),
+    final isTablet = MediaQuery.of(context).size.width > 600;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Edit Habit'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context),
           ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.symmetric(
+          vertical: 24,
+          horizontal: isTablet ? 48 : 24,
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Edit Habit',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
             _buildTextField(
               controller: _nameController,
               label: 'Habit Name',
@@ -128,14 +114,12 @@ class _HabitDetailDialogState extends State<HabitDetailDialog> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 32),
           ],
         ),
       ),
     );
   }
-
-  // ... (copy all the build methods from AddHabitDialog with same implementation)
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -173,14 +157,12 @@ class _HabitDetailDialogState extends State<HabitDetailDialog> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: Theme.of(
-        context,
-      ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-    );
-  }
+  Widget _buildSectionTitle(String title) => Text(
+    title,
+    style: Theme.of(
+      context,
+    ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+  );
 
   Widget _buildCategorySelector() {
     return Wrap(
