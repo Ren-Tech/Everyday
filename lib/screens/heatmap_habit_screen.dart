@@ -48,9 +48,16 @@ class HabitHeatmapScreen extends StatelessWidget {
                   completionRate: completionRate,
                   currentStreak: currentStreak,
                   longestStreak: longestStreak,
-                  mostProductiveDay: mostProductiveDay,
-                  mostProductiveDayCount: mostProductiveDayCount,
                 ),
+                if (mostProductiveDay.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDayCard(
+                    context,
+                    day: mostProductiveDay,
+                    count: mostProductiveDayCount,
+                    color: habit.color,
+                  ),
+                ],
                 const SizedBox(height: 32),
                 _buildHeatmapSection(context),
               ],
@@ -90,57 +97,7 @@ class HabitHeatmapScreen extends StatelessWidget {
     required double completionRate,
     required int currentStreak,
     required int longestStreak,
-    required String mostProductiveDay,
-    required int mostProductiveDayCount,
   }) {
-    final statCards = [
-      _buildStatCard(
-        context,
-        title: 'Completed',
-        value: '$totalCompletions',
-        subtitle: '${habit.targetCount} per day target',
-        icon: Icons.check_circle,
-        color: habit.color,
-      ),
-      _buildStatCard(
-        context,
-        title: 'Consistency',
-        value: '${(completionRate * 100).toStringAsFixed(0)}%',
-        subtitle: '$daysTracked days tracked',
-        icon: Icons.trending_up,
-        color: habit.color,
-      ),
-      _buildStatCard(
-        context,
-        title: 'Current Streak',
-        value: '$currentStreak',
-        subtitle: currentStreak == 1 ? 'day' : 'days',
-        icon: Icons.local_fire_department,
-        color: habit.color,
-      ),
-      _buildStatCard(
-        context,
-        title: 'Record Streak',
-        value: '$longestStreak',
-        subtitle: longestStreak == 1 ? 'day' : 'days',
-        icon: Icons.star,
-        color: habit.color,
-      ),
-    ];
-
-    if (mostProductiveDay.isNotEmpty) {
-      statCards.add(
-        _buildStatCard(
-          context,
-          title: 'Best Day',
-          value: mostProductiveDay,
-          subtitle: '$mostProductiveDayCount completions',
-          icon: Icons.calendar_today,
-          color: habit.color,
-        ),
-      );
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -151,17 +108,47 @@ class HabitHeatmapScreen extends StatelessWidget {
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 16),
-        GridView.builder(
+        GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          itemCount: statCards.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: isWideScreen ? 3 : 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: isWideScreen ? 1.6 : 1.4,
-          ),
-          itemBuilder: (context, index) => statCards[index],
+          crossAxisCount: isWideScreen ? 3 : 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: isWideScreen ? 1.8 : 1.6,
+          children: [
+            _buildStatCard(
+              context,
+              title: 'Completed',
+              value: '$totalCompletions',
+              subtitle: '${habit.targetCount} per day target',
+              icon: Icons.check_circle,
+              color: habit.color,
+            ),
+            _buildStatCard(
+              context,
+              title: 'Consistency',
+              value: '${(completionRate * 100).toStringAsFixed(0)}%',
+              subtitle: '$daysTracked days tracked',
+              icon: Icons.trending_up,
+              color: habit.color,
+            ),
+            _buildStatCard(
+              context,
+              title: 'Current Streak',
+              value: '$currentStreak',
+              subtitle: currentStreak == 1 ? 'day' : 'days',
+              icon: Icons.local_fire_department,
+              color: habit.color,
+            ),
+            _buildStatCard(
+              context,
+              title: 'Record Streak',
+              value: '$longestStreak',
+              subtitle: longestStreak == 1 ? 'day' : 'days',
+              icon: Icons.star,
+              color: habit.color,
+            ),
+          ],
         ),
       ],
     );
@@ -184,10 +171,11 @@ class HabitHeatmapScreen extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: color),
+              Icon(icon, size: 16, color: color),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -198,23 +186,76 @@ class HabitHeatmapScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.labelSmall?.copyWith(color: Colors.grey[600]),
+                ),
+              ],
+            ],
           ),
-          if (subtitle != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: Theme.of(
-                context,
-              ).textTheme.labelSmall?.copyWith(color: Colors.grey[600]),
-            ),
-          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDayCard(
+    BuildContext context, {
+    required String day,
+    required int count,
+    required Color color,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.calendar_today, size: 16, color: color),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Best Day',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: color.withOpacity(0.8),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                day,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
+          Text(
+            '$count completions',
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+          ),
         ],
       ),
     );
