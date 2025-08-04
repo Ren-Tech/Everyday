@@ -1,6 +1,7 @@
 import 'package:everyday/models/habit.dart';
 import 'package:everyday/providers/habit_provider.dart';
 import 'package:everyday/screens/habit_detail_screen.dart';
+import 'package:everyday/screens/heatmap_habit_screen.dart';
 import 'package:everyday/widgets/heatmap_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -262,45 +263,9 @@ class HabitCard extends StatelessWidget {
   }
 
   void _showFullHeatmap(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.all(16),
-        child: Container(
-          width: double.maxFinite,
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.8,
-          ),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${habit.name} - Jan ${DateTime.now().year} to Today',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: HeatmapWidget(habit: habit, compact: false),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => HabitHeatmapScreen(habit: habit)),
     );
   }
 
